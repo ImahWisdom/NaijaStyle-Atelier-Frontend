@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: #faf9f7;
+    color: #1a1a1a;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Cormorant Garamond', serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gold text-black font-body font-medium px-8 py-3 rounded-none tracking-widest text-sm uppercase transition-all duration-300 hover:bg-gold-dark hover:tracking-wider;
+  }
+
+  .btn-outline {
+    @apply border border-black text-black font-body font-medium px-8 py-3 rounded-none tracking-widest text-sm uppercase transition-all duration-300 hover:bg-black hover:text-white;
+  }
+
+  .section-title {
+    @apply font-display text-4xl md:text-5xl font-light tracking-wide;
+  }
+
+  .input-field {
+    @apply w-full border-b border-gray-300 bg-transparent py-3 px-0 text-sm font-body focus:outline-none focus:border-gold transition-colors placeholder-gray-400;
+  }
+
+  .card-hover {
+    @apply transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl;
+  }
+}
+
+/* Page transition */
+.page-enter {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 400ms, transform 400ms;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #faf9f7;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4B78F;
+  border-radius: 0;
+}
+
+/* Toast animation */
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.toast-enter {
+  animation: slideDown 0.3s ease forwards;
+}
