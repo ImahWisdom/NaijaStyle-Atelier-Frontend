@@ -66,7 +66,7 @@ export default function Home() {
 
       {/* Categories */}
       <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="flex items-end justify-between mb-10">
+        <div className="flex items-center justify-between mb-10">
           <h2 className="section-title">Shop by<br />Category</h2>
           <Link to="/shop" className="hidden md:flex items-center gap-2 text-xs tracking-widest uppercase text-gray-500 hover:text-gold transition-colors">
             View All <FiArrowRight size={14} />
@@ -128,7 +128,7 @@ export default function Home() {
       {/* New Arrivals */}
       {(loading || newArrivals.length > 0) && (
         <section className="max-w-7xl mx-auto px-6 py-20">
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-center justify-between mb-10">
             <h2 className="section-title">New Arrivals</h2>
             <Link to="/shop" className="text-xs tracking-widest uppercase text-gray-500 hover:text-gold transition-colors flex items-center gap-2">View All <FiArrowRight size={14} /></Link>
           </div>
