@@ -41,7 +41,7 @@ export default function ProductDetail() {
     <div className="min-h-screen pt-24">
       {toast && <Toast message={toast} />}
       <div className="max-w-7xl mx-auto px-6 py-10">
-        <Link to="/shop" className="inline-flex items-center gap-2 text-xs tracking-widest uppercase text-gray-500 hover:text-gold transition-colors mb-10">
+        <Link to={`/shop?category=${encodeURIComponent(product.category)}`} className="inline-flex items-center gap-2 text-xs tracking-widest uppercase text-gray-500 hover:text-gold transition-colors mb-10">
           <FiArrowLeft size={14} /> Back to Shop
         </Link>
 

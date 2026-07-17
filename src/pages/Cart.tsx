@@ -1,14 +1,17 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { FiTrash2, FiPlus, FiMinus, FiShoppingBag, FiArrowRight } from 'react-icons/fi'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { payWithPaystack, generateReference } from '../utils/paystack'
 import Toast from '../components/Toast'
 
+const PENDING_KEY = 'naijastyle_pending_reference'
+
 export default function Cart() {
   const { cart, addToCart, decreaseQuantity, removeFromCart, clearCart, cartTotal } = useCart()
   const { isLoggedIn, user, token } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState(user?.email || '')
   const [emailError, setEmailError] = useState('')
   const [processing, setProcessing] = useState(false)
@@ -16,27 +19,46 @@ export default function Cart() {
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 4000)
   }
 
-  const saveOrder = async (reference: string) => {
+  // Ask the backend to independently confirm with Paystack whether this
+  // reference actually succeeded, then record the order. Safe to call more
+  // than once with the same reference — it just returns the existing order.
+  const verifyAndFinalize = async (reference: string, { silent = false } = {}) => {
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/api/orders`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          email,
-          userId: user?.id || null,
-          items: cart.map(i => ({ productId: i._id, name: i.name, image: i.image, price: i.price, quantity: i.quantity })),
-          total: cartTotal,
-          reference,
-        }),
+        body: JSON.stringify({ reference }),
       })
-    } catch { /* silently fail — payment already succeeded */ }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Could not confirm payment.')
+
+      window.localStorage.removeItem(PENDING_KEY)
+      clearCart()
+      navigate(`/order-confirmation/${reference}`)
+      return true
+    } catch (err: any) {
+      if (!silent) showToast(err.message || 'Could not confirm payment. Please contact support.', 'error')
+      return false
+    } finally {
+      setProcessing(false)
+    }
   }
+
+  // On page load: if a payment was left mid-flight (e.g. the page reloaded
+  // right after a bank transfer/USSD payment before we could confirm it),
+  // automatically re-check it with the backend so the user doesn't lose
+  // their confirmation just because the tab refreshed.
+  useEffect(() => {
+    const pending = window.localStorage.getItem(PENDING_KEY)
+    if (pending) verifyAndFinalize(pending, { silent: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCheckout = () => {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -46,14 +68,16 @@ export default function Cart() {
     setEmailError('')
     setProcessing(true)
     const reference = generateReference()
+    window.localStorage.setItem(PENDING_KEY, reference)
 
     payWithPaystack({
       email, amount: cartTotal, reference,
+      metadata: {
+        userId: user?.id || null,
+        items: cart.map(i => ({ productId: i._id, name: i.name, image: i.image, price: i.price, quantity: i.quantity })),
+      },
       onSuccess: async (ref) => {
-        await saveOrder(ref.reference)
-        setProcessing(false)
-        clearCart()
-        showToast(`Payment successful! Ref: ${ref.reference.slice(-8)}`)
+        await verifyAndFinalize(ref.reference)
       },
       onClose: () => {
         setProcessing(false)

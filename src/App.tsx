@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import Navbar from './components/Navbar'
@@ -8,6 +9,8 @@ import Home from './pages/Home'
 import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
+import Orders from './pages/Orders'
+import OrderConfirmation from './pages/OrderConfirmation'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import About from './pages/About'
@@ -15,13 +18,15 @@ import Contact from './pages/Contact'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 
+if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual'
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation()
-  const prevPath = window.sessionStorage.getItem('prevPath')
-  if (prevPath !== pathname) {
+  useEffect(() => {
     window.scrollTo(0, 0)
-    window.sessionStorage.setItem('prevPath', pathname)
-  }
+  }, [pathname])
   return null
 }
 
@@ -38,6 +43,8 @@ function App() {
               <Route path="/shop" element={<Shop />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/order-confirmation/:reference" element={<OrderConfirmation />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />

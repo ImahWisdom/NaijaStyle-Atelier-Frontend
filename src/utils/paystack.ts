@@ -4,11 +4,12 @@ interface PaystackOptions {
   email: string
   amount: number
   reference: string
+  metadata?: Record<string, any>
   onSuccess: (ref: { reference: string }) => void
   onClose?: () => void
 }
 
-export function payWithPaystack({ email, amount, reference, onSuccess, onClose }: PaystackOptions) {
+export function payWithPaystack({ email, amount, reference, metadata, onSuccess, onClose }: PaystackOptions) {
   const paystack = new PaystackPop()
   paystack.newTransaction({
     key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string,
@@ -16,6 +17,7 @@ export function payWithPaystack({ email, amount, reference, onSuccess, onClose }
     amount: Math.round(amount * 100),
     reference,
     currency: 'NGN',                  // ← add this line
+    metadata: metadata || {},
     onSuccess,
     onClose: onClose ?? (() => {}),
   })

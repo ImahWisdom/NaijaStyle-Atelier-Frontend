@@ -46,12 +46,12 @@ export default function Shop() {
             onChange={e => setSearch(e.target.value)}
             className="border-b border-gray-300 bg-transparent py-2 px-0 text-sm w-full md:w-64 focus:outline-none focus:border-gold transition-colors placeholder-gray-400"
           />
-          <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
             <button onClick={() => setFiltersOpen(!filtersOpen)} className="md:hidden flex items-center gap-2 text-xs tracking-widest uppercase border border-gray-300 px-4 py-2">
               <FiFilter size={13} /> Filters
             </button>
             <select value={sort} onChange={e => setSort(e.target.value)}
-              className="border-b border-gray-300 bg-transparent py-2 text-xs tracking-wide uppercase focus:outline-none focus:border-gold cursor-pointer ml-auto">
+              className="border border-gray-300 bg-transparent px-3 py-2 text-xs tracking-wide uppercase focus:outline-none focus:border-gold cursor-pointer flex-1 md:flex-none">
               {sortOptions.map(o => <option key={o}>{o}</option>)}
             </select>
           </div>

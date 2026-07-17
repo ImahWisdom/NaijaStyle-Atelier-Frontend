@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { FiShoppingBag, FiMenu, FiX, FiUser, FiLogOut } from 'react-icons/fi'
+import { FiShoppingBag, FiMenu, FiX, FiUser, FiLogOut, FiPackage } from 'react-icons/fi'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -57,6 +57,9 @@ export default function Navbar() {
                 <span className={`text-xs tracking-wide font-body ${isHome && !scrolled ? 'text-white/70' : 'text-gray-500'}`}>
                   Hi, {user?.name.split(' ')[0]}
                 </span>
+                <Link to="/orders" className={`transition-colors ${linkClass}`} title="Order History">
+                  <FiPackage size={17} />
+                </Link>
                 <button onClick={logout} className={`transition-colors ${linkClass}`} title="Logout">
                   <FiLogOut size={17} />
                 </button>

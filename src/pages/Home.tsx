@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useProducts } from '../utils/useProducts'
 import ProductCard from '../components/ProductCard'
@@ -15,6 +16,31 @@ export default function Home() {
   const { products, loading } = useProducts()
   const bestsellers = products.filter(p => p.badge === 'Bestseller').slice(0, 4)
   const newArrivals = products.filter(p => p.badge === 'New').slice(0, 4)
+
+  const [email, setEmail] = useState('')
+  const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [subMessage, setSubMessage] = useState('')
+
+  async function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) return
+    setSubStatus('loading')
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/newsletter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Something went wrong.')
+      setSubStatus('success')
+      setSubMessage(data.message || 'Subscribed successfully!')
+      setEmail('')
+    } catch (err: any) {
+      setSubStatus('error')
+      setSubMessage(err.message || 'Something went wrong. Please try again.')
+    }
+  }
 
   return (
     <div>
@@ -69,7 +95,7 @@ export default function Home() {
       {(loading || bestsellers.length > 0) && (
         <section className="bg-[#f5f0eb] py-20">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-end justify-between mb-10">
+            <div className="flex items-center justify-between mb-10">
               <h2 className="section-title">Bestsellers</h2>
               <Link to="/shop" className="text-xs tracking-widest uppercase text-gray-500 hover:text-gold transition-colors flex items-center gap-2">See All <FiArrowRight size={14} /></Link>
             </div>
@@ -124,11 +150,18 @@ export default function Home() {
           <p className="text-gold text-xs tracking-[0.4em] uppercase mb-4">Stay Connected</p>
           <h2 className="font-display text-4xl font-light mb-4">Join the Atelier</h2>
           <p className="text-gray-400 text-sm mb-8 font-body">Get exclusive access to new collections and special offers.</p>
-          <div className="flex gap-0 border border-gray-700">
-            <input type="email" placeholder="Your email address"
+          <form onSubmit={handleSubscribe} className="flex gap-0 border border-gray-700">
+            <input type="email" placeholder="Your email address" value={email}
+              onChange={e => setEmail(e.target.value)} required
               className="flex-1 bg-transparent px-5 py-3 text-sm text-white placeholder-gray-500 focus:outline-none" />
-            <button className="bg-gold text-black px-6 py-3 text-xs tracking-widest uppercase font-medium hover:bg-gold-dark transition-colors">Subscribe</button>
-          </div>
+            <button type="submit" disabled={subStatus === 'loading'}
+              className="bg-gold text-black px-6 py-3 text-xs tracking-widest uppercase font-medium hover:bg-gold-dark transition-colors disabled:opacity-60">
+              {subStatus === 'loading' ? 'Subscribing…' : 'Subscribe'}
+            </button>
+          </form>
+          {subMessage && (
+            <p className={`mt-4 text-sm ${subStatus === 'error' ? 'text-red-400' : 'text-gold'}`}>{subMessage}</p>
+          )}
         </div>
       </section>
     </div>
