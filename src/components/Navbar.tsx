@@ -105,9 +105,14 @@ export default function Navbar() {
               ))}
               <div className="border-t border-gray-100 pt-8 flex flex-col gap-4">
                 {isLoggedIn ? (
-                  <button onClick={logout} className="text-sm text-gray-500 tracking-widest uppercase text-left hover:text-gold">
-                    Logout
-                  </button>
+                  <>
+                    <Link to="/orders" className="text-sm text-gray-500 tracking-widest uppercase text-left hover:text-gold">
+                      Order History
+                    </Link>
+                    <button onClick={logout} className="text-sm text-gray-500 tracking-widest uppercase text-left hover:text-gold">
+                      Logout
+                    </button>
+                  </>
                 ) : (
                   <>
                     <Link to="/login" className="text-sm text-gray-500 tracking-widest uppercase hover:text-gold">Login</Link>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FiTrash2, FiPlus, FiMinus, FiShoppingBag, FiArrowRight } from 'react-icons/fi'
 import { useCart } from '../context/CartContext'
@@ -7,6 +7,7 @@ import { payWithPaystack, generateReference } from '../utils/paystack'
 import Toast from '../components/Toast'
 
 const PENDING_KEY = 'naijastyle_pending_reference'
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 export default function Cart() {
   const { cart, addToCart, decreaseQuantity, removeFromCart, clearCart, cartTotal } = useCart()
@@ -15,7 +16,9 @@ export default function Cart() {
   const [email, setEmail] = useState(user?.email || '')
   const [emailError, setEmailError] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const paymentSucceededRef = useRef(false)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -25,29 +28,53 @@ export default function Cart() {
   // Ask the backend to independently confirm with Paystack whether this
   // reference actually succeeded, then record the order. Safe to call more
   // than once with the same reference — it just returns the existing order.
+  //
+  // Retries with backoff because Paystack's popup can report "success" on
+  // the client a few seconds before their own verify API reflects that same
+  // status server-side — especially for bank transfer/USSD/mobile money,
+  // which aren't instant the way card payments are. Without retrying, that
+  // brief gap looked like a hard failure even though the payment was fine.
   const verifyAndFinalize = async (reference: string, { silent = false } = {}) => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ reference }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Could not confirm payment.')
+    const delays = [0, 2000, 3000, 4000, 5000] // ~14s of retries total
+    let lastError = 'Could not confirm payment.'
 
-      window.localStorage.removeItem(PENDING_KEY)
-      clearCart()
-      navigate(`/order-confirmation/${reference}`)
-      return true
-    } catch (err: any) {
-      if (!silent) showToast(err.message || 'Could not confirm payment. Please contact support.', 'error')
-      return false
-    } finally {
-      setProcessing(false)
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      if (attempt > 0) {
+        setConfirming(true)
+        await sleep(delays[attempt])
+      }
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ reference }),
+        })
+        const data = await res.json()
+        if (!res.ok) { lastError = data.message || lastError; continue }
+
+        paymentSucceededRef.current = true
+        window.localStorage.removeItem(PENDING_KEY)
+        clearCart()
+        navigate(`/order-confirmation/${reference}`)
+        return true
+      } catch {
+        lastError = 'Could not reach the server to confirm payment.'
+      }
     }
+
+    // All retries exhausted — the reference stays in localStorage, so if the
+    // webhook finishes recording it in the background (or the user reopens
+    // the site later), it'll still be picked up automatically.
+    if (!silent) {
+      showToast(
+        `We're still confirming your payment. Don't worry — your reference (${reference.slice(-8)}) is saved, and your order will appear automatically once confirmed. Refresh in a minute, or contact support if it doesn't.`,
+        'error'
+      )
+    }
+    return false
   }
 
   // On page load: if a payment was left mid-flight (e.g. the page reloaded
@@ -67,6 +94,7 @@ export default function Cart() {
     }
     setEmailError('')
     setProcessing(true)
+    paymentSucceededRef.current = false
     const reference = generateReference()
     window.localStorage.setItem(PENDING_KEY, reference)
 
@@ -78,9 +106,16 @@ export default function Cart() {
       },
       onSuccess: async (ref) => {
         await verifyAndFinalize(ref.reference)
+        setProcessing(false)
+        setConfirming(false)
       },
       onClose: () => {
+        // Paystack can fire onClose right after a successful payment too
+        // (the popup closes either way) — don't show "cancelled" if the
+        // payment actually went through.
+        if (paymentSucceededRef.current) return
         setProcessing(false)
+        setConfirming(false)
         showToast('Payment cancelled.', 'error')
       },
     })
@@ -181,8 +216,13 @@ export default function Cart() {
 
             <button onClick={handleCheckout} disabled={processing}
               className="w-full bg-black text-white text-xs tracking-widest uppercase py-4 flex items-center justify-center gap-3 hover:bg-gold hover:text-black transition-all duration-300 mt-6 disabled:opacity-50">
-              {processing ? 'Opening Paystack…' : (<>Pay with Paystack <FiArrowRight size={14} /></>)}
+              {confirming ? 'Confirming your payment…' : processing ? 'Opening Paystack…' : (<>Pay with Paystack <FiArrowRight size={14} /></>)}
             </button>
+            {confirming && (
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Please don't close this page — confirming your payment with Paystack.
+              </p>
+            )}
           </div>
         </div>
       </div>
